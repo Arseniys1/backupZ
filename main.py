@@ -1,6 +1,8 @@
 from pathlib import Path
 import argparse
 
+from backupZ.config_parser import ConfigParser
+
 # Создаем парсер
 parser = argparse.ArgumentParser()
 
@@ -14,7 +16,18 @@ current_directory = Path(__file__).resolve().parent
 
 
 def main():
-    print(current_directory)
+    parser = ConfigParser()
+    parser.variables = {
+        "DOCUMENT_ROOT": "/var/www/html",  # Пример переменной
+        "SERVER_NAME": "example.com"
+    }
+
+    # Парсим все .conf файлы в папке configs
+    parser.parse_directory(f"{current_directory}/configs")
+
+    # Вывод результата
+    import pprint
+    pprint.pprint(parser.get_config())
 
 
 if __name__ == '__main__':

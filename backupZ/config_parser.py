@@ -6,16 +6,25 @@ from collections import defaultdict
 
 class ConfigParser:
     def __init__(self):
-        self.config = defaultdict(dict)
+        self.config = defaultdict(lambda: defaultdict(dict))  # Конфигурация по файлам
         self.current_context = []
-        self.errors = []
+        self.errors = []  # Список для хранения ошибок
         self.variables = {}  # Словарь для хранения переменных
+        self.current_file = None  # Текущий файл, который парсится
 
     def parse_file(self, filename):
         """Парсит один файл конфигурации."""
+        self.current_file = filename  # Устанавливаем текущий файл
         with open(filename, 'r') as file:
             for line_num, line in enumerate(file, start=1):
                 self._parse_line(line.strip(), line_num, filename)
+
+        # Выводим ошибки, если они есть, после завершения парсинга файла
+        if self.errors:
+            print(f"Ошибки при парсинге файла {filename}:")
+            for error in self.errors:
+                print(error)
+            self.errors = []  # Очищаем список ошибок после вывода
 
     def parse_directory(self, directory):
         """Рекурсивно парсит все файлы в указанной папке."""
@@ -39,10 +48,11 @@ class ConfigParser:
                 self._enter_block(f"If[{condition}]", "", line_num, filename)
                 return
 
-            # Обработка блоков <BlockName ...>
-            block_match = re.match(r'<(\w+)\s+(.*?)>', line)
+            # Обработка блоков <BlockName ...> или <BlockName>
+            block_match = re.match(r'<(\w+)(?:\s+(.*?))?>', line)
             if block_match:
                 block_name, block_args = block_match.groups()
+                block_args = block_args if block_args else ""  # Если аргументов нет, используем пустую строку
                 self._enter_block(block_name, block_args, line_num, filename)
                 return
 
@@ -58,6 +68,7 @@ class ConfigParser:
             directive_match = re.match(r'(\w+)\s+(.*)', line)
             if directive_match:
                 key, value = directive_match.groups()
+                value = self._clean_value(value)  # Убираем лишние кавычки
                 self._validate_directive(key, value, line_num, filename)
                 self._add_directive(key, value, line_num, filename)
             else:
@@ -65,6 +76,11 @@ class ConfigParser:
 
         except Exception as e:
             self.errors.append(f"Ошибка в файле {filename}, строка {line_num}: {str(e)}")
+
+    def _clean_value(self, value):
+        """Убирает лишние кавычки из значения."""
+        # Убираем кавычки с начала и конца строки
+        return value.strip('"\'')
 
     def _enter_block(self, block_name, block_args, line_num, filename):
         """Обрабатывает вход в блок."""
@@ -92,9 +108,8 @@ class ConfigParser:
     def _add_directive(self, key, value, line_num, filename):
         """Добавляет директиву в текущий контекст."""
         context_key = self._get_context_key()
-        if key in self.config[context_key]:
-            self.errors.append(f"Дублирующая директива '{key}' в файле {filename}, строка {line_num}")
-        self.config[context_key][key] = value
+        # Добавляем директиву в конфигурацию текущего файла
+        self.config[filename][context_key][key] = value
 
     def _get_context_key(self):
         """Генерирует ключ для текущего контекста."""
