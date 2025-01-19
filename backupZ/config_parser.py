@@ -68,6 +68,7 @@ class ConfigParser:
         self.errors: List[str] = []  # Список для хранения ошибок
         self.variables: Dict[str, str] = {}  # Словарь для хранения переменных
         self.current_file: Optional[str] = None  # Текущий файл, который парсится
+        self.errors_exists: bool = False
 
     def parse_file(self, filename: str):
         """Парсит один файл конфигурации."""
@@ -82,6 +83,7 @@ class ConfigParser:
             for error in self.errors:
                 print(error)
             self.errors = []  # Очищаем список ошибок после вывода
+            self.errors_exists = True
 
     def parse_directory(self, directory: str):
         """Рекурсивно парсит все файлы в указанной папке."""
