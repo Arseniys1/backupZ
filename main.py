@@ -25,9 +25,11 @@ def main():
     # Парсим все .conf файлы в папке configs
     parser.parse_directory(f"{current_directory}/configs")
 
+    config = parser.get_config()
+
     # Вывод результата
     import pprint
-    pprint.pprint(parser.get_config())
+    pprint.pprint(config)
 
 
 if __name__ == '__main__':
