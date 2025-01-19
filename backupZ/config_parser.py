@@ -5,6 +5,7 @@ import yaml
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
+from dotenv import dotenv_values  # Для загрузки переменных из .env файлов
 
 @dataclass
 class Directive:
@@ -97,6 +98,10 @@ class ConfigParser:
             if not line or line.startswith('#'):
                 return
 
+            # Обработка директивы Envs
+            if line.startswith("Envs"):
+                self._handle_envs_directive(line, line_num, filename)
+
             # Обработка условий <If ...>
             if_match = re.match(r'<If\s+(.*?)>', line)
             if if_match:
@@ -132,6 +137,29 @@ class ConfigParser:
 
         except Exception as e:
             self.errors.append(f"Ошибка в файле {filename}, строка {line_num}: {str(e)}")
+
+    def _handle_envs_directive(self, line: str, line_num: int, filename: str):
+        """Обрабатывает директиву Envs."""
+        envs_match = re.match(r'Envs\s+(.*)', line)
+        if not envs_match:
+            self.errors.append(f"Неправильный формат директивы Envs в файле {filename}, строка {line_num}: {line}")
+            return
+
+        envs_dir = envs_match.group(1).strip('"\'')  # Убираем кавычки
+        if not os.path.isdir(envs_dir):
+            self.errors.append(f"Директория с .env файлами не найдена: {envs_dir} в файле {filename}, строка {line_num}")
+            return
+
+        # Загружаем переменные из всех .env файлов в указанной директории
+        for env_file in os.listdir(envs_dir):
+            if env_file.endswith('.env'):
+                env_path = os.path.join(envs_dir, env_file)
+                env_vars = dotenv_values(env_path)
+                env_name = os.path.splitext(env_file)[0]  # Имя файла без расширения
+                if env_name.startswith('.'):
+                    env_name = env_name[1:]  # Убираем точку в начале, если есть
+                for key, value in env_vars.items():
+                    self.variables[f"{env_name}.{key}"] = value  # Формат: filename.ПЕРЕМЕННАЯ
 
     def _clean_value(self, value: str) -> str:
         """Убирает лишние кавычки из значения."""
@@ -180,6 +208,7 @@ class ConfigParser:
 
     def _replace_variables(self, line: str, line_num: int, filename: str) -> str:
         """Заменяет переменные ${VAR} на их значения."""
+
         def replace_var(match):
             var_name = match.group(1)
             if var_name not in self.variables:
@@ -187,7 +216,8 @@ class ConfigParser:
                 return match.group(0)
             return self.variables[var_name]
 
-        return re.sub(r'\$\{(\w+)\}', replace_var, line)
+        # Исправленное регулярное выражение: поддерживает точки в именах переменных
+        return re.sub(r'\$\{([\w\.]+)\}', replace_var, line)
 
     def _validate_directive(self, key: str, value: str, line_num: int, filename: str):
         """Проверяет допустимость значений директив."""
