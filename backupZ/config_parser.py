@@ -19,7 +19,7 @@ class Directive:
 class BlockArgs:
     """Класс для представления аргументов блока."""
     raw_args: str  # Сырые аргументы (например, "*:80")
-    parsed_args: Dict[str, str] = field(default_factory=dict)  # Парсированные аргументы (например, {"host": "*", "port": "80"})
+    parsed_args: Dict[str, str] = field(default_factory=dict)  # Парсированные аргументы
 
     def __post_init__(self):
         """Парсит аргументы при создании объекта."""
@@ -30,7 +30,6 @@ class BlockArgs:
         if not raw_args:
             return {}
 
-        # Пример: *:80 -> {"host": "*", "port": "80"}
         args_dict = {}
         parts = raw_args.split()
         for part in parts:
@@ -50,16 +49,16 @@ class Block:
     """Класс для представления блока."""
     name: str
     args: BlockArgs  # Аргументы блока
-    directives: Dict[str, Directive] = field(default_factory=dict)
-    blocks: Dict[str, 'Block'] = field(default_factory=dict)
+    directives: List[Directive] = field(default_factory=list)  # Список директив
+    blocks: List['Block'] = field(default_factory=list)  # Список вложенных блоков
     source_file: str = ""
     line_num: int = 0
 
 @dataclass
 class Config:
     """Класс для представления всей конфигурации."""
-    blocks: Dict[str, Block] = field(default_factory=dict)
-    directives: Dict[str, Directive] = field(default_factory=dict)
+    blocks: List[Block] = field(default_factory=list)  # Список блоков верхнего уровня
+    directives: List[Directive] = field(default_factory=list)  # Список директив верхнего уровня
 
 class ConfigParser:
     def __init__(self):
@@ -173,10 +172,10 @@ class ConfigParser:
         new_block = Block(name=block_name, args=args, source_file=filename, line_num=line_num)
         if self.current_context:
             # Если есть текущий контекст, добавляем новый блок как вложенный
-            self.current_context[-1].blocks[block_name] = new_block
+            self.current_context[-1].blocks.append(new_block)
         else:
             # Иначе добавляем блок на верхний уровень
-            self.config.blocks[block_name] = new_block
+            self.config.blocks.append(new_block)
         self.current_context.append(new_block)
 
     def _exit_block(self, line: str, line_num: int, filename: str):
@@ -203,10 +202,10 @@ class ConfigParser:
         directive = Directive(key=key, value=value, source_file=filename, line_num=line_num)
         if self.current_context:
             # Если есть текущий контекст, добавляем директиву в текущий блок
-            self.current_context[-1].directives[key] = directive
+            self.current_context[-1].directives.append(directive)
         else:
             # Иначе добавляем директиву на верхний уровень
-            self.config.directives[key] = directive
+            self.config.directives.append(directive)
 
     def _replace_variables(self, line: str, line_num: int, filename: str) -> str:
         """Заменяет переменные ${VAR} на их значения."""
@@ -245,8 +244,8 @@ class ConfigParser:
     def _config_to_dict(self, config: Config) -> Dict:
         """Преобразует объект Config в словарь."""
         result = {
-            "directives": {k: vars(v) for k, v in config.directives.items()},
-            "blocks": {k: self._block_to_dict(v) for k, v in config.blocks.items()}
+            "directives": [vars(d) for d in config.directives],  # Преобразуем список директив
+            "blocks": [self._block_to_dict(b) for b in config.blocks]  # Преобразуем список блоков
         }
         return result
 
@@ -255,9 +254,8 @@ class ConfigParser:
         return {
             "name": block.name,
             "args": vars(block.args),  # Преобразуем BlockArgs в словарь
-            "directives": {k: vars(v) for k, v in block.directives.items()},
-            "blocks": {k: self._block_to_dict(v) for k, v in block.blocks.items()},
+            "directives": [vars(d) for d in block.directives],  # Преобразуем список директив
+            "blocks": [self._block_to_dict(b) for b in block.blocks],  # Рекурсивно преобразуем вложенные блоки
             "source_file": block.source_file,
             "line_num": block.line_num
         }
-
