@@ -28,12 +28,10 @@ class CheckMainBlockDirectives:
 
     def _validate_time_directive(self, directive):
         try:
-            # Пытаемся преобразовать строку в объект datetime
             datetime.strptime(directive.value, '%H:%M')
             return True
         except ValueError:
-            # Если возникает ошибка, значит строка не соответствует формату
-            return False
+            print(f"Не верно указано время бэкапа у директивы Time. В файле: {directive.source_file} строка: {directive.line_num}")
 
 
 
