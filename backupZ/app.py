@@ -5,9 +5,10 @@ import pprint
 import sys
 
 from backupZ.config_parser import ConfigParser
+from backupZ.patterns.singleton import Singleton
 
 
-class App:
+class App(Singleton):
     def __init__(self):
         self._current_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
         self._parser = ConfigParser()
