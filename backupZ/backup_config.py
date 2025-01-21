@@ -1,5 +1,13 @@
 
 
+class Scripts:
+    def __init__(self):
+        self._dir = None
+        self._before_command = None
+        self._after_command = None
+        self._script_exit_code = 0
+
+
 class BackupConfig:
     def __init__(self):
         self._filename = "backup %Y-%m-%d %H:%M:%S"

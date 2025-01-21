@@ -1,15 +1,17 @@
 import os
 from datetime import datetime
 
+from backupZ.check_directives.check_directives import CheckDirectives
 
-class CheckMainBlockDirectives:
-    def __init__(self, block):
-        self._block = block
+
+class CheckMainBlockDirectives(CheckDirectives):
+    def __init__(self, main_block):
+        super().__init__(main_block)
         self._dir_directive_found = False
         self._time_directive_found = False
 
     def check_directives(self):
-        for directive in self._block.directives:
+        for directive in self._main_block.directives:
             if directive.key == "Dir":
                 if self._validate_dir_directive(directive):
                     self._dir_directive_found = True
@@ -32,6 +34,4 @@ class CheckMainBlockDirectives:
             return True
         except ValueError:
             print(f"Не верно указано время бэкапа у директивы Time. В файле: {directive.source_file} строка: {directive.line_num}")
-
-
 
